@@ -3,9 +3,17 @@ import os.path
 from subprocess import Popen, PIPE
 from os.path import join, dirname, exists
 from ConfigParser import SafeConfigParser
+import inspect
 
 DEBUG = True
 
+
+class Loggable(object):
+    def printSignature(self, *args):
+        cname = self.__class__.__name__
+        fname = inspect.getouterframes(inspect.currentframe())[1][3]
+        alist = ','.join(args)
+        print '%s.%s(%s)' % (cname, fname, alist)
 
 
 class LogEntry(object):
