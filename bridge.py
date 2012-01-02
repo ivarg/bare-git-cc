@@ -94,17 +94,22 @@ class GitCCBridge(object):
             # self._pushMasterToCentral()
 
 
-    def _addDiscoveredChanges(self):
-        '''
-        Check for discrepancies between git and clearcase. If any are found, update 
-        git to be aligned with clearcase, and return the resulting commitId.
-        The purpose is primarily to discover renames in clearcase, but is also a way 
-        to ensure synchronization between git and clearcase.
-        '''
-        (addition_dict, deletion_list) = self._getNewFileDifferences()
-        if len(addition_dict) == len(deletion_list) == 0:
-            return []
+    def syncReport(self):
+        cc_snapshot = cc.fileVersionDictionary()
+        cc_files = cc_snapshot.keys()
+        git.checkout(CC_BRANCH)
+        git_files = git.filesList()
 
+        added_in_cc = list(set(cc_files) - set(git_files))
+        added_in_git = list(set(git_files) - set(cc_files))
+
+        cc_dict = dict()
+        map(lambda xx: cc_dict.update({xx : cc_snapshot.get(xx)}), added_in_cc)
+        return (cc_dict, added_in_git)
+
+
+
+    def alignGitToClearcase(self, addition_dict, deletion_list):
         cs = ClearcaseChangeSet('Unknown', 'Anonymous file changes in Clearcase')
         time = datetime.now().strftime('%Y%m%d.%H%M%S')
         for addition in addition_dict.keys():
@@ -114,24 +119,17 @@ class GitCCBridge(object):
         return self._commitToCCBranch([cs])
 
 
-    # ivar: this should be a direct gitfacade call
-    def _getGitSnapshot(self):
-        git.checkout(CC_BRANCH)
-        gitfiles = git.listFiles()
-        return gitfiles.split('\n')
-
-
-    def _getNewFileDifferences(self):
-        cc_snapshot = cc.fileVersionDictionary()
-        cc_files = cc_snapshot.keys()
-        git_files = self._getGitSnapshot()
-
-        added_in_cc = list(set(cc_files) - set(git_files))
-        added_in_git = list(set(git_files) - set(cc_files))
-
-        cc_dict = dict()
-        map(lambda xx: cc_dict.update({xx : cc_snapshot.get(xx)}), added_in_cc)
-        return (cc_dict, added_in_git)
+    def _addDiscoveredChanges(self):
+        '''
+        Check for discrepancies between git and clearcase. If any are found, update 
+        git to be aligned with clearcase, and return the resulting commitId.
+        The purpose is primarily to discover renames in clearcase, but is also a way 
+        to ensure synchronization between git and clearcase.
+        '''
+        (addition_dict, deletion_list) = self.syncReport()
+        if len(addition_dict) == len(deletion_list) == 0:
+            return []
+        return self.alignGitToClearcase(addition_dict, deletion_list)
 
 
     def _updateMasterFromCentral(self):

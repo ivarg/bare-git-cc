@@ -6,9 +6,6 @@ class GitFacade(Loggable):
     def __init__(self, git_dir):
         self.git_dir = git_dir
 
-    def getTopLog(self, branch=None):
-        pass
-
     def diffsByCommit(self, commitId):
         self.printSignature(commitId)
         return self._git_exec(['diff','--name-status', '-M', '-z', '%s^..%s' % (commitId, commitId)])
@@ -42,8 +39,9 @@ class GitFacade(Loggable):
         self.printSignature(msg)
         self._git_exec(['commit', '-m', msg], env=env)
 
-    def listFiles(self):
-        return self._git_exec(['ls-files']).strip()
+    def filesList(self):
+        self.printSignature()
+        return self._git_exec(['ls-files']).strip().split('\n')
 
     def branchHead(self, branch='HEAD'):
         self.printSignature(branch)
