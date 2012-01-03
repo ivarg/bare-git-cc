@@ -4,8 +4,9 @@ from subprocess import Popen, PIPE
 from os.path import join, dirname, exists
 from ConfigParser import SafeConfigParser
 import inspect
+import logging
 
-DEBUG = True
+logger = logging.getLogger()
 
 
 class Loggable(object):
@@ -13,13 +14,7 @@ class Loggable(object):
         cname = self.__class__.__name__
         fname = inspect.getouterframes(inspect.currentframe())[1][3]
         alist = ','.join(args)
-        print '%s.%s(%s)' % (cname, fname, alist)
-
-
-class LogEntry(object):
-    def __init__(self):
-        self.date = None
-        self.sha = None
+        logger.debug('%s.%s(%s)' % (cname, fname, alist))
 
 
 class GitConfigParser():
@@ -63,16 +58,10 @@ def prepareForCopy(filepath):
             pass # The directory already exists
 
 
-def debug(string):
-    if DEBUG:
-        print('> ' + string)
-
-
 def popen(exe, cmd, cwd, env=None, decode=True, errors=True):
     cmd.insert(0, exe)
-    if DEBUG:
-        f = lambda a: a if not a.count(' ') else '"%s"' % a
-        debug(' '.join(map(f, cmd)))
+    f = lambda a: a if not a.count(' ') else '"%s"' % a
+    logger.debug(' '.join(map(f, cmd)))
     pipe = Popen(cmd, cwd=cwd, stdout=PIPE, stderr=PIPE, env=env)
     (stdout, stderr) = pipe.communicate()
     if errors and pipe.returncode > 0:

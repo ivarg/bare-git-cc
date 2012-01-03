@@ -1,6 +1,9 @@
 import re
+from datetime import datetime
 from util import popen, Loggable
+import logging
 
+logger = logging.getLogger()
 
 class GitFacade(Loggable):
     def __init__(self, git_dir):
@@ -8,7 +11,9 @@ class GitFacade(Loggable):
 
     def diffsByCommit(self, commitId):
         self.printSignature(commitId)
-        return self._git_exec(['diff','--name-status', '-M', '-z', '%s^..%s' % (commitId, commitId)])
+        diffs = self._git_exec(['diff','--name-status', '-M', '-z', '%s^..%s' % (commitId, commitId)])
+        logger.debug(diffs)
+        return diffs
 
     def resetHard(self, ref):
         self.printSignature(ref)
@@ -39,29 +44,52 @@ class GitFacade(Loggable):
         self.printSignature(msg)
         self._git_exec(['commit', '-m', msg], env=env)
 
+    def setTag(self, tagname, ref=''):
+        self._git_exec(['tag', '-f', tagname, ref])
+
+    def removeTag(self, tagname):
+        self._git_exec(['tag', '-d', tagname])
+
     def filesList(self):
         self.printSignature()
         return self._git_exec(['ls-files']).strip().split('\n')
 
     def branchHead(self, branch='HEAD'):
         self.printSignature(branch)
-        return self._git_exec(['show', '-s', '--format=%H', branch]).strip()
+        res = self._git_exec(['show', '-s', '--format=%H', branch]).strip()
+        logger.debug(res)
+        return res
 
     def commitMessage(self, commitId):
         self.printSignature(commitId)
-        return self._git_exec(['log', '--format=%B', '%s^..%s' % (commitId, commitId)]).strip()
+        res = self._git_exec(['log', '--format=%B', '%s^..%s' % (commitId, commitId)]).strip()
+        logger.debug(res)
+        return res
+
 
     def authorDate(self, commitId):
         self.printSignature(commitId)
-        return self._git_exec(['show', '-s', '--format=%ai', commitId])[:19]
+        res = datetime.strptime(self.authorDateStr(commitId), '%Y-%m-%d %H:%M:%S')
+        logger.debug(res)
+        return res
         
+    def authorDateStr(self, commitId):
+        self.printSignature(commitId)
+        res = self._git_exec(['show', '-s', '--format=%ai', commitId])[:19]
+        logger.debug(res)
+        return res
+
     def authorName(self, commitId):
         self.printSignature(commitId)
-        return self._git_exec(['show', '-s', '--format=%an', commitId]).strip()
+        res = self._git_exec(['show', '-s', '--format=%an', commitId]).strip()
+        logger.debug(res)
+        return res
 
     def authorEmail(self, commitId):
         self.printSignature(commitId)
-        return self._git_exec(['show', '-s', '--format=%ae', commitId]).strip()
+        res = self._git_exec(['show', '-s', '--format=%ae', commitId]).strip()
+        logger.debug(res)
+        return res
 
     def mergeCommitFf(self, commitId, msg):
         self.printSignature(commitId, msg)
@@ -78,7 +106,9 @@ class GitFacade(Loggable):
     def commitHistoryPathBlob(self, fromRef, toRef):
         self.printSignature(fromRef, toRef)
         # ivar: explore the need for x01 delimiters when using the -z flag
-        return self._git_exec(['log', '-z', '--first-parent', '--reverse', '--format=%x01%H%x02%s%x02%b', '%s..%s' % (fromRef, toRef)]).strip('\x01')
+        res = self._git_exec(['log', '-z', '--first-parent', '--reverse', '--format=%x01%H%x02%s%x02%b', '%s..%s' % (fromRef, toRef)]).strip('\x01')
+        logger.debug(res)
+        return res
 
     def reverseCommitHistoryList(self, fromRef, toRef='HEAD'):
         '''
@@ -87,7 +117,9 @@ class GitFacade(Loggable):
         self.printSignature(fromRef, toRef)
         # ivar: why not use -z flag here?   
         commits = self._git_exec(['log', '--first-parent', '--reverse', '--format=%H', '%s..%s' % (fromRef, toRef)]).strip()
-        return commits.split('\n')
+        res = commits.split('\n')
+        logger.debug(res)
+        return res
 
 
     def _git_exec(self, cmd, **args):

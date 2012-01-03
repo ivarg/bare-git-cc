@@ -3,6 +3,7 @@ import re
 import tempfile
 from os.path import join, exists
 from datetime import datetime, timedelta
+import logging
 
 import users
 import git
@@ -10,30 +11,45 @@ import clearcase
 import util
 from diff import AddDiff, DelDiff, ModDiff, RenameDiff
 
+logger = logging.getLogger()
+
 """
 Things to test/verify:
 - Additions and renames in Git propagate to Clearcase
 - Additions and deletes in Clearcase propagates to Git
 - How can we check sync status?
 - How can we identify clearcase renames?
+- git exclude - how to prevent files in git to get added in cc?
 """
 
 ## Branch names
 CC_BRANCH = 'master_cc'
 MASTER = 'master'
 CENTRAL = 'remotes/central/master'
+CI_TAG = 'master_ci'
 
 DELIM = '|'
 GIT_DIR = 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket'
 CC_DIR = 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/view/base/TM_FObject/Financial/FMarket'
+LOG_FILE = 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket/.debug.log'
 COMMIT_CACHE = 'commit_cache'
 COMMIT_CACHE_FILE = join(GIT_DIR, '.git', COMMIT_CACHE)
+
+git_excludes = []
 
 cfg = util.GitConfigParser(GIT_DIR, MASTER)
 cfg.read()
 
 git = git.GitFacade(GIT_DIR)
 cc = clearcase.ClearcaseFacade(CC_DIR)
+
+
+def isPendingClearcaseChanges():
+    date = git.authorDate(CC_BRANCH) + timedelta(seconds=1)
+    since = datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
+    history = cc.checkinHistoryReversed(since, cfg.getInclude())
+    logger.info('Pending file changes in Clearcase: %d', len(history))
+    return len(history) > 0
 
 
 class GitCCBridge(object):
@@ -44,7 +60,7 @@ class GitCCBridge(object):
 
     def onDoCheckinToClearcase(self):
         '''
-        Stuff is verified on Central and we should do a checkin to clearcase.
+        Stuff is verified on central and we should do a checkin to clearcase.
         This can be executed only if we can to reserved checkouts on all concerned files.
         If not, we must throw an exception.
         First, we get the latest from Central.
@@ -55,10 +71,12 @@ class GitCCBridge(object):
         '''
         self._updateMasterFromCentral()
         if len(self.git_commits) == 0:
-            print '## No pending commits to check in'
+            logger.info('No pending commits to check in to Clearcase')
             return
         try:
+            logger.info('Checking in new commits to Clearcase...')
             cc_head = git.branchHead(CC_BRANCH)
+            git.setTag(CI_TAG)
             self._mergeCommitsOnBranch(CC_BRANCH, self.git_commits)
             self._checkinCCBranch(cc_head)
         except MergeConflictException as mce:
@@ -67,6 +85,10 @@ class GitCCBridge(object):
         except CheckoutReservedException as cre:
             git.resetHard(cc_head)
             raise cre
+        if not cc.isUpdated():
+            logger.warning('Clearcase needs updating!')
+            cc.update()
+            logger.info('Clearcase updated')
         git.resetHard(MASTER)
 
 
@@ -77,6 +99,7 @@ class GitCCBridge(object):
         + Merge clearcase commits on master (risk of conflict here)
         + Push to central
         '''
+        logger.info('Committing Clearcase changes to Git')
         commits = []
         cslist = self._getClearcaseChanges()
         if cslist:
@@ -91,7 +114,7 @@ class GitCCBridge(object):
             except MergeConflictException as mce:
                 git.resetHard(head)
                 raise mce
-            # self._pushMasterToCentral()
+            self._pushMasterToCentral()
 
 
     def syncReport(self):
@@ -99,6 +122,9 @@ class GitCCBridge(object):
         cc_files = cc_snapshot.keys()
         git.checkout(CC_BRANCH)
         git_files = git.filesList()
+
+        # Filter out git files not synced in clearcase
+        git_files = list(set(git_files) - set(git_excludes))
 
         added_in_cc = list(set(cc_files) - set(git_files))
         added_in_git = list(set(git_files) - set(cc_files))
@@ -156,17 +182,17 @@ class GitCCBridge(object):
         '''
         git.checkout(branch)
         for commitId in commits:
+            msg = git.commitMessage(commitId)
+            env = os.environ
+            env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = git.authorDateStr(commitId)
+            env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = git.authorName(commitId)
+            env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = git.authorEmail(commitId)
             try:
-                msg = git.commitMessage(commitId)
-                env = os.environ
-                env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = git.authorDate(commitId)
-                env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = git.authorName(commitId)
-                env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = git.authorEmail(commitId)
                 git.mergeCommitFf(commitId, msg)
+                logger.debug('Merged on branch %s commit %s', branch, commitId)
             except Exception as e:
-                print '## Exception caught:', e
                 git.mergeAbort()
-                raise MergeConflictException(commitId)
+                raise MergeConflictException(commitId, branch, getattr(e, 'message'))
 
 
     def _checkinCCBranch(self, old_head):
@@ -183,16 +209,12 @@ class GitCCBridge(object):
             comment = subject if body == '\n' else '%s\n%s' % (subject, body)
             comment = comment.strip('\n')
             commitToCC = CommitToClearcase(commitId, comment)
-            try:
-                commitToCC.checkoutClearcaseFiles()
-                commitToCC.updateClearcaseFiles()
-                commitToCC.checkinClearcaseFiles()
-            except CheckoutReservedException as cre:
-                raise cre
-            except Exception as e:
-                # print e
-                # undoCheckout(self.checkouts)
-                raise e
+            commitToCC.checkoutClearcaseFiles()
+            commitToCC.updateClearcaseFiles()
+            commitToCC.checkinClearcaseFiles()
+            logger.debug('Checked in to Clearcase commit %s', commitId)
+            git.setTag(CI_TAG, commitId)
+        git.removeTag(CI_TAG)
 
 
     def _saveGitCommits(self):
@@ -212,30 +234,22 @@ class GitCCBridge(object):
             ff.close()
             self.git_commits = blob.split('\n')
             os.remove(COMMIT_CACHE_FILE)
-            print '### Loading commits cache:', self.git_commits
+            logger.info('Loading commits cache: %s', self.git_commits)
             
 
     def _getClearcaseChanges(self):
         '''
         Retreives latest changes from clearcase and commits them to the cc branch (CC_BRANCH)
         '''
-        cslist = []
-        history = self._getClearcaseHistoryBlob()
-        if history == '':
+        date = git.authorDate(CC_BRANCH) + timedelta(seconds=1)
+        since = datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
+        history = cc.checkinHistoryReversed(since, cfg.getInclude())
+        if len(history) == 0:
             return None
-        history = history.strip('\x02')
-        hlist = history.split('\x02')
-        hlist.reverse()
-        hlist_tmp = []
-        for hh in hlist:
-            type, time, user, file, version, comment = hh.split('\x01')
-            if hh.startswith('checkinversion') or hh.startswith('checkindirectory'):
-                print '###', type, time, user, file, version, comment
-                hlist_tmp.append(hh)
-        hlist = hlist_tmp
-        type, _, user, _, _, comment = hlist[0].split('\x01')
+        cslist = []
+        type, _, user, _, _, comment = history[0].split('\x01')
         changeset = ClearcaseChangeSet(user, comment)
-        for line in hlist:
+        for line in history:
             type, time, user, file, version, comment = line.split('\x01')
             if user != changeset.userId or comment != changeset.comment:
                 if not changeset.isempty():
@@ -261,22 +275,6 @@ class GitCCBridge(object):
         return commits
 
 
-    def _getClearcaseHistoryBlob(self):
-        git.checkout(CC_BRANCH)
-        try:
-            since = self._getLastCommitTimeOnBranch(CC_BRANCH)
-        except:
-            return cfg.get('since')
-        return cc.historyBlob(since, cfg.getInclude())
-
-
-    def _getLastCommitTimeOnBranch(self, branch):
-        date = git.authorDate(branch)
-        date = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
-        date = date + timedelta(seconds=1)
-        return datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
-
-
     def _pushMasterToCentral(self):
         '''
         Push CC stuff from master to remote central
@@ -290,6 +288,8 @@ class GitCCBridge(object):
 class CheckoutReservedException(Exception):
     pass
 
+class UpdateCCAreaException(Exception):
+    pass
 
 class MergeConflictException(Exception):
     pass
@@ -309,6 +309,7 @@ class CommitToClearcase(object):
         files = []
         for diff in self.diffs:
             files.extend(diff.checkouts)
+        # ivar: duplicates shouldn't be present since all diffs come from one single commit
         files = list(set(files)) # remove duplicates
         self._checkoutReservedOrRaise(files)
 
@@ -319,8 +320,7 @@ class CommitToClearcase(object):
         except Exception as e:
             for file in diff.checkouts:
                 cc.undoCheckout(file)
-            cc.update()
-            raise e
+            raise UpdateCCAreaException(diff.file, getattr(e, 'message'))
 
     def checkinClearcaseFiles(self):
         files = []
@@ -329,6 +329,7 @@ class CommitToClearcase(object):
         files = list(set(files)) # remove duplicates
         for file in files:
             cc.checkin(file, self.comment)
+            logger.debug('Checked in to Clearcase file %s', file)
 
     def _checkoutReservedOrRaise(self, files):
         passed = []
@@ -338,13 +339,12 @@ class CommitToClearcase(object):
                 cc.checkout(ff)
                 passed.append(ff)
             except Exception as e:
-                print '## Exception caught:', e
                 notpassed.append(ff)
+                error = getattr(e, 'message')
         if len(notpassed) > 0:
             for pp in passed:
                 cc.undoCheckout(pp)
-            cc.update()
-            raise CheckoutReservedException(notpassed)
+            raise CheckoutReservedException(notpassed, error)
         return passed # Only for testability
 
     def _getCommitFileChanges(self, commitId):
@@ -407,7 +407,7 @@ class ClearcaseChangeSet(object):
         except Exception as e:
             if re.search('nothing( added)? to commit', e.args[0]) == None:
                 raise
-            print 'Nothing new to commit'
+            logger.info('Nothing new to commit')
             return None
 
 
@@ -439,7 +439,7 @@ class ClearcaseDelete(object):
 
     def stage(self):
         if not exists(self.file):
-            print 'File marked for deletion does not exist in the git repository: %s' % self.file
+            logger.info('File marked for deletion does not exist in the git repository: %s' % self.file)
             return
         git.removeFile(self.file)
 

@@ -2,6 +2,10 @@ import os, stat
 import tempfile
 import re
 from util import popen, Loggable
+import logging
+
+logger = logging.getLogger()
+
 
 class ClearcaseFacade(Loggable):
     def __init__(self, cc_dir):
@@ -21,6 +25,7 @@ class ClearcaseFacade(Loggable):
         ff.close()
         os.remove(tmpfile)
         hits = re.findall('^Updated:', buf, re.M)
+        logger.debug(len(hits) == 0)
         return len(hits) == 0
 
     def fileVersionDictionary(self):
@@ -28,20 +33,25 @@ class ClearcaseFacade(Loggable):
         Return a dictionary containing all versioned files in the clearcase view, with their corresponding branch/version.
         '''
         self.printSignature()
-        vob = self._cc_exec(['ls', '-l', '-r', '-vob'])
+        vob = self._cc_exec(['ls', '-long', '-recurse', '-vob'])
         vob = re.findall('^(version.*)', vob, re.M)
         fileversions = map(lambda ss: re.match('version\s+([^\s]+)', ss).group(1).replace('\\','/'), vob)
         vobdict = {}
         for fv in fileversions:
             obj = re.match('[\./]*(.+)@@(.+)', fv, re.M)
             vobdict[obj.group(1)] = obj.group(2)
+        logger.debug(vobdict)
         return vobdict
 
-    def historyBlob(self, since, folderList):
+    def checkinHistoryReversed(self, since, folderList):
         self.printSignature(since, str(folderList))
-        lsh = ['lsh', '-fmt', '%o%m\001%Nd\001%u\001%En\001%Vn\001%Nc\002', '-recurse', '-since', since]
+        lsh = ['lsh', '-fmt', '%o%m\001%Nd\001%u\001%En\001%Vn\001%Nc\n', '-recurse', '-since', since]
         lsh.extend(folderList) ## To filter our folders specified in configuration
-        return self._cc_exec(lsh)
+        blob = self._cc_exec(lsh)
+        filtered = re.findall('^(checkin.*)', blob, re.M)
+        filtered.reverse()
+        logger.debug(filtered)
+        return filtered
 
     def copyVobFile(self, ccfile, dest):
         self.printSignature(ccfile, dest)

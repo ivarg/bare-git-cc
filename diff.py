@@ -63,14 +63,14 @@ class DelDiff():
 
 
 class RenameDiff():
-    def __init__(self, commitId, src, dst):
+    def __init__(self, commitId, file, dst):
         self.commitId = commitId
-        self.src = src
+        self.file = file
         self.dst = dst
         self._extractCCFiles()
 
     def _extractCCFiles(self):
-        src_dir = dirname(self.src)
+        src_dir = dirname(self.file)
         src_dir = '.' if src_dir == '' else src_dir
         dst_dir = dirname(self.dst)
         path = []
@@ -78,7 +78,7 @@ class RenameDiff():
             path.append(dst_dir)
             dst_dir = dirname(dst_dir)
         dst_dir = '.' if dst_dir == '' else dst_dir
-        self.checkouts = [self.src, src_dir, dst_dir]
+        self.checkouts = [self.file, src_dir, dst_dir]
         self.checkins = [self.dst, src_dir, dst_dir]
         self.checkins.extend(path)
 
@@ -90,4 +90,4 @@ class RenameDiff():
             dst_dir = dirname(dst_dir)
         while len(path) > 0:
             cc_exec(['mkelem', '-nc', '-eltype', 'directory', path.pop()])
-        cc_exec(['mv', '-nc', self.src, self.dst])
+        cc_exec(['mv', '-nc', self.file, self.dst])
