@@ -14,7 +14,7 @@ class Loggable(object):
         cname = self.__class__.__name__
         fname = inspect.getouterframes(inspect.currentframe())[1][3]
         alist = ','.join(args)
-        logger.debug('%s.%s(%s)' % (cname, fname, alist))
+        logger.log(logging.DEBUG-1, '%s.%s(%s)' % (cname, fname, alist))
 
 
 class GitConfigParser():
@@ -61,7 +61,7 @@ def prepareForCopy(filepath):
 def popen(exe, cmd, cwd, env=None, decode=True, errors=True):
     cmd.insert(0, exe)
     f = lambda a: a if not a.count(' ') else '"%s"' % a
-    logger.debug(' '.join(map(f, cmd)))
+    logger.log(logging.DEBUG-5, ' '.join(map(f, cmd)))
     pipe = Popen(cmd, cwd=cwd, stdout=PIPE, stderr=PIPE, env=env)
     (stdout, stderr) = pipe.communicate()
     if errors and pipe.returncode > 0:

@@ -40,7 +40,6 @@ class ClearcaseFacade(Loggable):
         for fv in fileversions:
             obj = re.match('[\./]*(.+)@@(.+)', fv, re.M)
             vobdict[obj.group(1)] = obj.group(2)
-        logger.debug(vobdict)
         return vobdict
 
     def checkinHistoryReversed(self, since, folderList):
@@ -74,8 +73,19 @@ class ClearcaseFacade(Loggable):
         self.printSignature(file)
         self._cc_exec(['co', '-reserved', '-nc', file])
 
+    def addDirectory(self, dir):
+        self._cc_exec(['mkelem', '-nc', '-eltype', 'directory', dir])
 
-    
+    def addFile(self, file):
+        self._cc_exec(['mkelem', '-nc', file])
+
+    def removeFile(self, file):
+        self._cc_exec(['rm', file])
+
+    def moveFile(self, src, dst):
+        self._cc_exec(['mv', '-nc', src, dst])
+
+
     def _cc_exec(self, cmd, **args):
         return popen('cleartool', cmd, self.cc_dir, **args)
 
