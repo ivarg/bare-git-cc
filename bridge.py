@@ -26,6 +26,9 @@ Things to test/verify:
 CC_BRANCH = 'master_cc'
 MASTER = 'master'
 CENTRAL = 'remotes/central/master'
+# The CI_TAG tag is set at the commit most recently successfully checked in to clearcase, 
+# and is removed when no pending commit needs to be checked in. 
+# Thus, one should never see the tag unless something has gone wrong.
 CI_TAG = 'master_ci'
 
 DELIM = '|'
@@ -58,6 +61,7 @@ class GitCCBridge(object):
         self.checkouts = []
         self._loadGitCommits()
 
+
     def onDoCheckinToClearcase(self):
         '''
         Stuff is verified on central and we should do a checkin to clearcase.
@@ -69,6 +73,7 @@ class GitCCBridge(object):
         keeping the files checked out.
         Finally, we undo our reserved checkouts.
         '''
+        head = git.branchHead(MASTER)
         self._updateMasterFromCentral()
         if len(self.git_commits) == 0:
             logger.info('No pending commits to check in to Clearcase')
@@ -76,15 +81,14 @@ class GitCCBridge(object):
         try:
             logger.info('Checking in new commits to Clearcase...')
             cc_head = git.branchHead(CC_BRANCH)
-            git.setTag(CI_TAG)
             self._mergeCommitsOnBranch(CC_BRANCH, self.git_commits)
             self._checkinCCBranch(cc_head)
-        except MergeConflictException as mce:
-            git.resetHard(cc_head)
-            raise mce
-        except CheckoutReservedException as cre:
-            git.resetHard(cc_head)
-            raise cre
+        except CheckoutReservedException:
+            # ivar: Need some smart way to set bridge state after checkin failure
+            raise
+        except Exception:
+            git.resetBranches({MASTER:head, CC_BRANCH:cc_head})
+            raise
         if not cc.isUpdated():
             logger.warning('Clearcase needs updating!')
             cc.update()
@@ -168,9 +172,10 @@ class GitCCBridge(object):
             git.pullRebase() # ivar: Conflict? Can this raise if we enter in a merge?
             commits = git.reverseCommitHistoryList(head)
 ##### Only during development!! #####
-            commits = list(set(commits)-set(self.git_commits))
+            # commits = list(set(commits)-set(self.git_commits))
 #####################################
-            self.git_commits.extend(commits)
+            if commits:
+                self.git_commits.extend(commits)
 
 
     def _mergeCommitsOnBranch(self, branch, commits):
@@ -189,7 +194,7 @@ class GitCCBridge(object):
             env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = git.authorEmail(commitId)
             try:
                 git.mergeCommitFf(commitId, msg)
-                logger.debug('Merged on branch %s commit %s', branch, commitId)
+                logger.info('Merged on branch %s commit %s', branch, commitId)
             except Exception as e:
                 git.mergeAbort()
                 raise MergeConflictException(commitId, branch, getattr(e, 'message'))
@@ -318,9 +323,10 @@ class CommitToClearcase(object):
             for diff in self.diffs:
                 diff.updateCCArea()
         except Exception as e:
+            logger.error('Could not update files: %s', str(e))
             for file in diff.checkouts:
                 cc.undoCheckout(file)
-            raise UpdateCCAreaException(diff.file, getattr(e, 'message'))
+            raise UpdateCCAreaException(diff.commitId, str(e))
 
     def checkinClearcaseFiles(self):
         files = []
@@ -358,16 +364,14 @@ class CommitToClearcase(object):
         while len(split) > 1:
             symbol = split.pop(0)[0] # first char
             file = split.pop(0)
-            if file == CACHE_FILE:
-                continue
             if symbol == 'R':
-                diffs.append(RenameDiff(commitId, file, split.pop(0)))
+                diffs.append(RenameDiff(commitId, CC_DIR, file, split.pop(0)))
             elif symbol == 'A':
-                diffs.append(AddDiff(commitId, file))
+                diffs.append(AddDiff(commitId, CC_DIR, file))
             elif symbol == 'D':
-                diffs.append(DelDiff(file))
+                diffs.append(DelDiff(CC_DIR, file))
             elif symbol == 'M':
-                diffs.append(ModDiff(commitId, file))
+                diffs.append(ModDiff(commitId, CC_DIR, file))
             else:
                 raise Exception("Unknown status on file: (%s,%s)" % (symbol, file))
         return diffs
