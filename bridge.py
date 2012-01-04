@@ -9,9 +9,11 @@ import users
 import git
 import clearcase
 import util
-from diff import AddDiff, DelDiff, ModDiff, RenameDiff
 
-logger = logging.getLogger()
+cfg = util.GitConfigParser(GIT_DIR, MASTER)
+cfg.read()
+
+logger = logging.getLogger('bare-git-cc')
 
 """
 Things to test/verify:
@@ -39,9 +41,6 @@ COMMIT_CACHE = 'commit_cache'
 COMMIT_CACHE_FILE = join(GIT_DIR, '.git', COMMIT_CACHE)
 
 git_excludes = []
-
-cfg = util.GitConfigParser(GIT_DIR, MASTER)
-cfg.read()
 
 git = git.GitFacade(GIT_DIR)
 cc = clearcase.ClearcaseFacade(CC_DIR)
@@ -90,7 +89,7 @@ class GitCCBridge(object):
         except Exception:
             git.resetBranches({MASTER:head, CC_BRANCH:cc_head})
             raise
-        if not cc.isUpdated():
+        if cc.needUpdate():
             logger.warning('Clearcase needs updating!')
             cc.update()
             logger.info('Clearcase updated')

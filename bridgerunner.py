@@ -14,6 +14,7 @@ def setupRootLogger():
     h.setLevel(logging.INFO)
     logger.addHandler(h)
 
+    logger = logging.getLogger('bare-git-cc')
     h = logging.handlers.RotatingFileHandler(bridge.LOG_FILE, maxBytes=32768, backupCount=1)
     h.setFormatter(logging.Formatter('%(asctime)s [%(module)s.%(funcName)s] %(message)s'))
     h.setLevel(logging.DEBUG)
@@ -24,9 +25,16 @@ def setupRootLogger():
     h.setLevel(logging.ERROR)
     logger.addHandler(h)
 
+    recorder = logging.getLogger('recorder')
+    # h = logging.handlers.RotatingFileHandler('flow_recorder.log', maxBytes=32768, backupCount=0)
+    h = logging.FileHandler('flow_recorder.log')
+    h.setFormatter(logging.Formatter('%(asctime)s [%(module)s.%(funcName)s] %(message)s'))
+    h.setLevel(logging.DEBUG)
+    recorder.addHandler(h)
+
 
 setupRootLogger()
-logger = logging.getLogger()
+logger = logging.getLogger('bare-git-cc')
 
 if __name__ == '__main__':
     bb = bridge.GitCCBridge()
@@ -54,4 +62,11 @@ if __name__ == '__main__':
         except Exception as e:
             logger.error('Something unexpected has happened: %s', str(e))
             traceback.print_exc()
+
+    elif argv[1] == 'update_cc':
+        if not bridge.cc.needUpdate():
+            logger.info('Clearcase view is up to date')
+        else:
+            logger.info('Updating Clearcase view')
+            bridge.cc.update()
 

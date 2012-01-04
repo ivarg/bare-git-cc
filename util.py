@@ -6,22 +6,14 @@ from ConfigParser import SafeConfigParser
 import inspect
 import logging
 
-logger = logging.getLogger()
-
-
-class Loggable(object):
-    def printSignature(self, *args):
-        cname = self.__class__.__name__
-        fname = inspect.getouterframes(inspect.currentframe())[1][3]
-        alist = ','.join(args)
-        logger.log(logging.DEBUG-1, '%s.%s(%s)' % (cname, fname, alist))
+logger = logging.getLogger('bare-git-cc')
 
 
 class GitConfigParser():
     CORE = 'core'
     def __init__(self, git_dir, branch):
         self.section = branch
-        self.file = join(git_dir, '.git', 'gitcc')
+        self.file = join(git_dir, '.git', 'bgcc.conf')
         self.parser = SafeConfigParser();
         self.parser.add_section(self.section)
     def set(self, name, value):
