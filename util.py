@@ -10,34 +10,29 @@ logger = logging.getLogger('bare-git-cc')
 
 
 class GitConfigParser():
-    CORE = 'core'
-    def __init__(self, git_dir, branch):
-        self.section = branch
-        self.file = join(git_dir, '.git', 'bgcc.conf')
+    def __init__(self, configFile=None):
+        cwd = os.getcwd()
+        if configFile:
+            self.file = configFile
+        elif exists(join(cwd, 'bgcc.conf')):
+            self.file = join(cwd, 'bgcc.conf')
+        elif exists(join(cwd, '.git', 'bgcc.conf')):
+            self.file = join(cwd, 'bgcc.conf')
+        else:
+            raise Exception('No configuration file found')
         self.parser = SafeConfigParser();
-        self.parser.add_section(self.section)
-    def set(self, name, value):
-        self.parser.set(self.section, name, value)
-    def read(self):
         self.parser.read(self.file)
-    def write(self):
-        self.parser.write(open(self.file, 'w'))
-    def getCore(self, name, *args):
-        return self._get(self.CORE, name, *args)
-    def get(self, name, *args):
-        return self._get(self.section, name, *args)
-    def _get(self, section, name, default=None):
-        if not self.parser.has_option(section, name):
-            return default
-        return self.parser.get(section, name)
-    def getList(self, name, default=None):
-        return self.get(name, default).split('|')
+
+    def gitRoot(self):
+        return self.parser.get('core', 'git_root')
+    def ccRoot(self):
+        return self.parser.get('core', 'cc_root')
+    def logFile(self):
+        return self.parser.get('core', 'log_file')
+    def remote(self):
+        return self.parser.get('core', 'remote')
     def getInclude(self):
-        return self.getCore('include', '.').split('|')
-    def getBranches(self):
-        return self.getList('branches', 'main')
-    def getExtraBranches(self):
-        return self.getList('_branches', 'main')
+        return self.parser.get('core', 'include').split('|')
 
 
 def prepareForCopy(filepath):

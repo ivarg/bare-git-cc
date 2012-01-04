@@ -10,8 +10,7 @@ import git
 import clearcase
 import util
 
-cfg = util.GitConfigParser(GIT_DIR, MASTER)
-cfg.read()
+cfg = util.GitConfigParser()
 
 logger = logging.getLogger('bare-git-cc')
 
@@ -27,16 +26,16 @@ Things to test/verify:
 ## Branch names
 CC_BRANCH = 'master_cc'
 MASTER = 'master'
-CENTRAL = 'remotes/central/master'
 # The CI_TAG tag is set at the commit most recently successfully checked in to clearcase, 
 # and is removed when no pending commit needs to be checked in. 
 # Thus, one should never see the tag unless something has gone wrong.
 CI_TAG = 'master_ci'
 
-DELIM = '|'
-GIT_DIR = 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket'
-CC_DIR = 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/view/base/TM_FObject/Financial/FMarket'
-LOG_FILE = 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket/.debug.log'
+GIT_DIR = cfg.gitRoot() # 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket'
+CC_DIR =  cfg.ccRoot() # 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/view/base/TM_FObject/Financial/FMarket'
+LOG_FILE = cfg.logFile() #'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket/.debug.log'
+CENTRAL = cfg.remote()
+
 COMMIT_CACHE = 'commit_cache'
 COMMIT_CACHE_FILE = join(GIT_DIR, '.git', COMMIT_CACHE)
 
