@@ -33,11 +33,9 @@ class GitConfigParser():
 
     def gitRoot(self):
         gitroot = self.parser.get('core', 'git_root')
-        logger.debug('git_root: %s', gitroot)
         return gitroot
     def ccRoot(self):
         ccroot = self.parser.get('core', 'cc_root')
-        logger.debug('cc_root: %s', ccroot)
         return ccroot
     def logFile(self):
         return self.parser.get('core', 'log_file')
