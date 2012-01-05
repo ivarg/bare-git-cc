@@ -20,7 +20,8 @@ def setupRootLogger(cfg):
     h.setLevel(logging.DEBUG)
     logger.addHandler(h)
 
-    h = logging.handlers.SMTPHandler('10.254.66.32', 'bare-git-cc@sungard.com', ['ivar.gaitan@sungard.com'], 'Bridge error alert!')
+    ## Log errors to email recipient
+    h = logging.handlers.SMTPHandler(cfg.smtpServer(), cfg.emailSender(), cfg.emailRecipients(), 'Bridge error alert!')
     h.setFormatter(logging.Formatter('%(message)s'))
     h.setLevel(logging.ERROR)
     logger.addHandler(h)

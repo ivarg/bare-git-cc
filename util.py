@@ -47,6 +47,12 @@ class GitConfigParser():
         return self.parser.get('core', 'include').split('|')
     def getBranches(self):
         return self.parser.get('core', 'branches').split('|')
+    def emailSender(self):
+        return self.parser.get('email', 'sender')
+    def emailRecipients(self):
+        return self.parser.get('email', 'recipients').split('|')
+    def smtpServer(self):
+        return self.parser.get('email', 'smtp')
 
 
 def prepareForCopy(filepath):

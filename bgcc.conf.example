@@ -5,3 +5,7 @@ log_file = c:/path/to/bgcc.log
 remote = remotes/central/master
 include = Folders|To|Include|In|cc_root
 branches = main|and|other|branches
+[email]
+smtp = a.b.c.d
+sender = eve@example.com
+recipients = alice@example.com|bob@example.com
