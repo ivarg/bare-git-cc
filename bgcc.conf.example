@@ -1,0 +1,7 @@
+[core]
+git_root = c:/path/to/git/repo
+cc_root = c:/path/to/corresponding/directory/in/clearcase/view
+log_file = c:/path/to/bgcc.log
+remote = remotes/central/master
+include = Folders|To|Include|In|cc_root
+branches = main|and|other|branches
