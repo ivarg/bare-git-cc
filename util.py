@@ -6,7 +6,7 @@ from ConfigParser import SafeConfigParser
 import inspect
 import logging
 
-logger = logging.getLogger('bare-git-cc')
+logger = logging.getLogger('log.bgcc.file')
 
 # cfg = None
 
