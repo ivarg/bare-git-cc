@@ -3,10 +3,10 @@ from datetime import datetime
 import util
 import logging
 
-logger = logging.getLogger('bare-git-cc')
+logger = logging.getLogger('log.bgcc.file')
 
 # This is temporary stuff just for recording, set level to DEBUG to enable
-recorder = logging.getLogger('gitrecorder')
+recorder = logging.getLogger('log.bgcc.git')
 # h = logging.FileHandler('gitrecorder.log', 'w')
 # h.setFormatter(logging.Formatter('%(message)s'))
 # h.setLevel(logging.INFO)

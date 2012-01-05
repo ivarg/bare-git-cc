@@ -11,7 +11,7 @@ from clearcase import ClearcaseFacade
 import util
 
 
-logger = logging.getLogger('bare-git-cc')
+logger = logging.getLogger('log.bgcc.file')
 
 
 ## Branch names

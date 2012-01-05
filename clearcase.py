@@ -5,8 +5,8 @@ import util
 import logging
 
 # This is temporary stuff just for recording, set level to DEBUG to enable
-logger = logging.getLogger('bare-git-cc')
-recorder = logging.getLogger('ccrecorder')
+logger = logging.getLogger('log.bgcc.file')
+recorder = logging.getLogger('log.bgcc.clearcase')
 # h = logging.FileHandler('ccrecorder.log', 'w')
 # h.setFormatter(logging.Formatter('%(message)s'))
 # h.setLevel(logging.INFO)

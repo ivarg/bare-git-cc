@@ -6,7 +6,7 @@ import logging.handlers
 import util
 
 
-def setupRootLogger(cfg):
+def initLogging(cfg):
     logger = logging.getLogger()
     logger.setLevel(logging.NOTSET)
     h = logging.StreamHandler()
@@ -14,7 +14,7 @@ def setupRootLogger(cfg):
     h.setLevel(logging.INFO)
     logger.addHandler(h)
 
-    logger = logging.getLogger('bare-git-cc')
+    logger = logging.getLogger('log.bgcc.file')
     h = logging.handlers.RotatingFileHandler(cfg.logFile(), maxBytes=32768, backupCount=1)
     h.setFormatter(logging.Formatter('%(asctime)s [%(module)s.%(funcName)s] %(message)s'))
     h.setLevel(logging.DEBUG)
@@ -27,12 +27,11 @@ def setupRootLogger(cfg):
     logger.addHandler(h)
 
 
-
-logger = logging.getLogger('bare-git-cc')
+logger = logging.getLogger('log.bgcc.file')
 
 if __name__ == '__main__':
     cfg = util.GitConfigParser()
-    setupRootLogger(cfg)
+    initLogging(cfg)
     bb = bridge.GitCCBridge(cfg)
 
     if argv[1] == 'checkin':
