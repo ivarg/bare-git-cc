@@ -1,6 +1,7 @@
 
 
 Next steps
+- Identify added and deleted files in clearcase in the top directory
 - Rebuild clearcase history from a given date
 - Support passing custom configuration file to bridgerunner.py
 - Meaningful tests
