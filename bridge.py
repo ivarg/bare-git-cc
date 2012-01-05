@@ -6,22 +6,13 @@ from datetime import datetime, timedelta
 import logging
 
 import users
-import git
-import clearcase
+from git import GitFacade
+from clearcase import ClearcaseFacade
 import util
 
-cfg = util.GitConfigParser()
 
 logger = logging.getLogger('bare-git-cc')
 
-"""
-Things to test/verify:
-- Additions and renames in Git propagate to Clearcase
-- Additions and deletes in Clearcase propagates to Git
-- How can we check sync status?
-- How can we identify clearcase renames?
-- git exclude - how to prevent files in git to get added in cc?
-"""
 
 ## Branch names
 CC_BRANCH = 'master_cc'
@@ -31,33 +22,40 @@ MASTER = 'master'
 # Thus, one should never see the tag unless something has gone wrong.
 CI_TAG = 'master_ci'
 
-GIT_DIR = cfg.gitRoot() # 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket'
-CC_DIR =  cfg.ccRoot() # 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/view/base/TM_FObject/Financial/FMarket'
-LOG_FILE = cfg.logFile() #'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket/.debug.log'
-CENTRAL = cfg.remote()
+# GIT_DIR = util.cfg.gitRoot() # 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/fmarket'
+# CC_DIR =  util.cfg.ccRoot() # 'c:/Development/gitcc-bridges/prime/br_main_electronic_trading_test/view/base/TM_FObject/Financial/FMarket'
+# CENTRAL = util.cfg.remote()
+
 
 COMMIT_CACHE = 'commit_cache'
-COMMIT_CACHE_FILE = join(GIT_DIR, '.git', COMMIT_CACHE)
 
 git_excludes = []
 
-git = git.GitFacade(GIT_DIR)
-cc = clearcase.ClearcaseFacade(CC_DIR)
+cc = git = None
+
 
 
 def isPendingClearcaseChanges():
     date = git.authorDate(CC_BRANCH) + timedelta(seconds=1)
     since = datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
-    history = cc.checkinHistoryReversed(since, cfg.getInclude())
+    history = cc.checkinHistoryReversed(since)
     logger.info('Pending file changes in Clearcase: %d', len(history))
     return len(history) > 0
 
 
 class GitCCBridge(object):
-    def __init__(self):
+    def __init__(self, cfg):
+        global cc, git
+        self.git_dir = cfg.gitRoot()
+        self.cc_dir = cfg.ccRoot()
+        self.remote = cfg.remote()
+        git = GitFacade(self.git_dir)
+        cc = ClearcaseFacade(self.cc_dir, cfg.getInclude(), cfg.getBranches())
+        self.commit_cache = join(self.git_dir, '.git', COMMIT_CACHE)
         self.git_commits = []
         self.checkouts = []
         self._loadGitCommits()
+
 
 
     def onDoCheckinToClearcase(self):
@@ -142,9 +140,9 @@ class GitCCBridge(object):
         cs = ClearcaseChangeSet('Unknown', 'Anonymous file changes in Clearcase')
         time = datetime.now().strftime('%Y%m%d.%H%M%S')
         for addition in addition_dict.keys():
-            cs.add(ClearcaseModify(time, addition, addition_dict[addition]))
+            cs.add(ClearcaseModify(time, self.git_dir, addition, addition_dict[addition]))
         for deletion in deletion_list:
-            cs.add(ClearcaseDelete(time, deletion))
+            cs.add(ClearcaseDelete(time, self.git_dir, deletion))
         logger.info('Loading changeset [%s]', cs.comment.split('\n')[0])
         return self._commitToCCBranch([cs])
 
@@ -169,7 +167,7 @@ class GitCCBridge(object):
         '''
         git.checkout(MASTER)
         head = git.branchHead()
-        if head != git.branchHead(CENTRAL):
+        if head != git.branchHead(self.remote):
             git.pullRebase() # ivar: Conflict? Can this raise if we enter in a merge?
             commits = git.reverseCommitHistoryList(head)
 ##### Only during development!! #####
@@ -229,18 +227,18 @@ class GitCCBridge(object):
             return
         concat_fn = lambda x,y: '%s\n%s' % (x,y)
         commit_blob = reduce(concat_fn, self.git_commits)
-        ff = open(COMMIT_CACHE_FILE, 'w')
+        ff = open(self.commit_cache, 'w')
         ff.write(commit_blob)
         ff.close()
 
 
     def _loadGitCommits(self):
-        if exists(COMMIT_CACHE_FILE):
-            ff = open(COMMIT_CACHE_FILE, 'r')
+        if exists(self.commit_cache):
+            ff = open(self.commit_cache, 'r')
             blob = ff.read()
             ff.close()
             self.git_commits = blob.split('\n')
-            os.remove(COMMIT_CACHE_FILE)
+            os.remove(self.commit_cache)
             logger.info('Loading commits cache: %s', self.git_commits)
             
 
@@ -251,7 +249,7 @@ class GitCCBridge(object):
         logger.debug('')
         date = git.authorDate(CC_BRANCH) + timedelta(seconds=1)
         since = datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
-        history = cc.checkinHistoryReversed(since, cfg.getInclude())
+        history = cc.checkinHistoryReversed(since)
         if len(history) == 0:
             return None
         cslist = []
@@ -265,10 +263,10 @@ class GitCCBridge(object):
                     cslist.append(changeset)
                 changeset = ClearcaseChangeSet(user, comment)
             if type == 'checkinversion':
-                changeset.add(ClearcaseModify(time, file, version))
+                changeset.add(ClearcaseModify(time, self.git_dir, file, version))
             elif type == 'checkindirectory version':
                 if comment.startswith('Uncataloged file element'):
-                    changeset.add(createClearcaseDelete(time, file, version, comment))
+                    changeset.add(createClearcaseDelete(time, self.git_dir, file, version, comment))
         if not changeset.isempty():
             logger.info('Loading changeset [%s]', changeset.comment.split('\n')[0].strip())
             cslist.append(changeset)
@@ -422,34 +420,37 @@ class ClearcaseChangeSet(object):
 
 
 class ClearcaseModify(object):
-    def __init__(self, time, file, version):
+    def __init__(self, time, git_dir, file, version):
         self.time = time
+        self.git_dir = git_dir
         self.file = file
         self.version = version
 
     def stage(self):
-        toFile = join(GIT_DIR, self.file)
+        toFile = join(self.git_dir, self.file)
         util.prepareForCopy(toFile)
         ccfile = '%s@@%s' % (self.file, self.version)
         cc.copyVobFile(ccfile, toFile)
         git.addFile(self.file)
 
 
-def createClearcaseDelete(time, dir, version, comment):
-    dir = join(GIT_DIR, dir)
+def createClearcaseDelete(time, git_dir, dir, version, comment):
+    # dir = join(git_dir, dir)
     file = re.search('\"(.+)\"', comment).group(1)
     file = join(dir, file)
-    return ClearcaseDelete(time, file)
+    return ClearcaseDelete(time, git_dir, file)
 
 
 class ClearcaseDelete(object):
-    def __init__(self, time, file):
+    def __init__(self, time, git_dir, file):
         self.time = time
+        self.git_dir = git_dir
         self.file = file
 
+    # ivar: if needed, give git_dir as an argument to stage()
     def stage(self):
-        if not exists(join(GIT_DIR, self.file)):
-            logger.info('File marked for deletion does not exist in the git repository: %s' % join(GIT_DIR, self.file))
+        if not exists(join(self.git_dir, self.file)):
+            logger.info('File marked for deletion does not exist in the git repository: %s' % join(self.git_dir, self.file))
             return
         git.removeFile(self.file)
 

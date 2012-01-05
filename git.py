@@ -7,10 +7,10 @@ logger = logging.getLogger('bare-git-cc')
 
 # This is temporary stuff just for recording, set level to DEBUG to enable
 recorder = logging.getLogger('gitrecorder')
-h = logging.FileHandler('gitrecorder.log', 'w')
-h.setFormatter(logging.Formatter('%(message)s'))
-h.setLevel(logging.INFO)
-recorder.addHandler(h)
+# h = logging.FileHandler('gitrecorder.log', 'w')
+# h.setFormatter(logging.Formatter('%(message)s'))
+# h.setLevel(logging.INFO)
+# recorder.addHandler(h)
 
 def formatRecord(res, *args):
     xx = '(%s, \'%s\'),' % (str(args), str(res))

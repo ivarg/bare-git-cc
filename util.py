@@ -8,9 +8,17 @@ import logging
 
 logger = logging.getLogger('bare-git-cc')
 
+# cfg = None
+
+# def readConfiguration(file=None):
+    # logger.warning('read configuration')
+    # global cfg
+    # cfg = GitConfigParser(file)
+
 
 class GitConfigParser():
     def __init__(self, configFile=None):
+        logger.debug('')
         cwd = os.getcwd()
         if configFile:
             self.file = configFile
@@ -24,15 +32,21 @@ class GitConfigParser():
         self.parser.read(self.file)
 
     def gitRoot(self):
-        return self.parser.get('core', 'git_root')
+        gitroot = self.parser.get('core', 'git_root')
+        logger.debug('git_root: %s', gitroot)
+        return gitroot
     def ccRoot(self):
-        return self.parser.get('core', 'cc_root')
+        ccroot = self.parser.get('core', 'cc_root')
+        logger.debug('cc_root: %s', ccroot)
+        return ccroot
     def logFile(self):
         return self.parser.get('core', 'log_file')
     def remote(self):
         return self.parser.get('core', 'remote')
     def getInclude(self):
         return self.parser.get('core', 'include').split('|')
+    def getBranches(self):
+        return self.parser.get('core', 'branches').split('|')
 
 
 def prepareForCopy(filepath):
