@@ -63,7 +63,7 @@ class ClearcaseFacade(object):
         lsh = ['lsh', '-fmt', '%o%m\001%Nd\001%u\001%En\001%Vn\001%Nc\n', '-recurse', '-since', since]
         lsh.extend(self.includes) ## To filter our folders specified in configuration
         blob = self._cc_exec(lsh).replace('\\', '/') # clean up windows separator ugliness
-        logger.debug(blob)
+        logger.debug(blob.replace('\x01',' ').replace('\n',''))
         ptrn = '^(checkin.+?\x01.+?\x01.+?\x01.+?\x01.+[%s]/\d+\x01.*)' % ','.join(self.branches)
         filtered = re.findall(ptrn, blob, re.M)
         filtered.reverse()
