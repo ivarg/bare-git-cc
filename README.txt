@@ -1,7 +1,8 @@
 
 
 Next steps
-- Identify added and deleted files in clearcase in the top directory
+- Instead of merging between master and master_cc, commit patches to avoid messy two-parent history
+- Identify added and deleted files in clearcase in the top directory (lsh ommits events on the current dir)
 - Rebuild clearcase history from a given date
 - Support passing custom configuration file to bridgerunner.py
 - Meaningful tests
