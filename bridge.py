@@ -213,7 +213,7 @@ class GitCCBridge(object):
             commitId, subject, body = hentry.split('\x02')
             comment = subject if body == '\n' else '%s\n%s' % (subject, body)
             comment = comment.strip('\n')
-            commitToCC = CommitToClearcase(commitId, comment)
+            commitToCC = CommitToClearcase(commitId, comment, self.cc_dir)
             commitToCC.checkoutClearcaseFiles()
             commitToCC.updateClearcaseFiles()
             commitToCC.checkinClearcaseFiles()
@@ -308,10 +308,10 @@ class CommitToClearcase(object):
     This is a helper class to perform updates in Clearcase corresponding to
     commits in Git.
     '''
-    def __init__(self, commitId, comment):
+    def __init__(self, commitId, comment, cc_dir):
         self.commitId = commitId
         self.comment = comment
-        self.diffs = self._getCommitFileChanges(self.commitId)
+        self.diffs = self._getCommitFileChanges(self.commitId, cc_dir)
 
     def checkoutClearcaseFiles(self):
         self._checkoutReservedOrRaise(self._filesToCheckout())
@@ -356,7 +356,7 @@ class CommitToClearcase(object):
             raise CheckoutReservedException(notpassed, error)
         return passed # Only for testability
 
-    def _getCommitFileChanges(self, commitId):
+    def _getCommitFileChanges(self, commitId, cc_dir):
         '''
         Given a commit, return a list with Diff objects, containing type symbol and files affected.
         '''
@@ -368,13 +368,13 @@ class CommitToClearcase(object):
             symbol = split.pop(0)[0] # first char
             file = split.pop(0)
             if symbol == 'R':
-                diffs.append(RenameDiff(commitId, CC_DIR, file, split.pop(0)))
+                diffs.append(RenameDiff(commitId, cc_dir, file, split.pop(0)))
             elif symbol == 'A':
-                diffs.append(AddDiff(commitId, CC_DIR, file))
+                diffs.append(AddDiff(commitId, cc_dir, file))
             elif symbol == 'D':
-                diffs.append(DelDiff(CC_DIR, file))
+                diffs.append(DelDiff(cc_dir, file))
             elif symbol == 'M':
-                diffs.append(ModDiff(commitId, CC_DIR, file))
+                diffs.append(ModDiff(commitId, cc_dir, file))
             else:
                 raise Exception("Unknown status on file: (%s,%s)" % (symbol, file))
         return diffs
