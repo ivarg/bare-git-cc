@@ -80,6 +80,10 @@ class GitFacade(object):
         recorder.debug('%s', formatRecord(res, branch))
         return res
 
+    def updateRemote(self):
+        self._git_exec(['remote', 'update'])
+        recorder.debug('%s', formatRecord(None))
+
     def commitMessage(self, commitId):
         res = self._git_exec(['log', '--format=%B', '%s^..%s' % (commitId, commitId)]).strip()
         recorder.debug('%s', formatRecord(res, commitId))

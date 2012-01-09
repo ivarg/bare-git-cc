@@ -170,6 +170,7 @@ class GitCCBridge(object):
         '''
         git.checkout(MASTER)
         head = git.branchHead()
+        git.updateRemote()
         if head != git.branchHead(self.remote):
             git.pullRebase() # ivar: Conflict? Can this raise if we enter in a merge?
             commits = git.reverseCommitHistoryList(head)
