@@ -54,7 +54,6 @@ class GitCCBridge(object):
         self.commit_cache = join(self.git_dir, '.git', COMMIT_CACHE)
         self.git_commits = []
         self.checkouts = []
-        self._loadGitCommits()
 
 
 
@@ -69,6 +68,7 @@ class GitCCBridge(object):
         keeping the files checked out.
         Finally, we undo our reserved checkouts.
         '''
+        self._loadGitCommits()
         head = git.branchHead(MASTER)
         self._updateMasterFromCentral()
         if len(self.git_commits) == 0:
@@ -100,6 +100,7 @@ class GitCCBridge(object):
         + Merge clearcase commits on master (risk of conflict here)
         + Push to central
         '''
+        self._loadGitCommits()
         logger.info('Committing Clearcase changes to Git')
         commits = []
         cslist = self._getClearcaseChanges()
