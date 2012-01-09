@@ -104,6 +104,7 @@ class GitCCBridge(object):
         logger.info('Committing Clearcase changes to Git')
         commits = []
         cslist = self._getClearcaseChanges()
+        cchead = git.branchHead(CC_BRANCH)
         if cslist:
             commits = self._commitToCCBranch(cslist)
         commits.extend(self._addDiscoveredChanges())
@@ -115,6 +116,7 @@ class GitCCBridge(object):
                 self._mergeCommitsOnBranch(MASTER, commits)
             except MergeConflictException as mce:
                 git.resetHard(head)
+                git.resetHard(cchead)
                 raise mce
             self._pushMasterToCentral()
 
