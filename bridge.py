@@ -418,7 +418,7 @@ class ClearcaseChangeSet(object):
     def commitToGit(self):
         for change in self.changes:
             change.stage()
-        # cache.write()
+        cc.update()
         env = os.environ
         env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = self.time.strftime('%Y-%m-%d %H:%M:%S')
         env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = users.getUserName(self.userId).encode()
