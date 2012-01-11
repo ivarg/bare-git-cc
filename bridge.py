@@ -236,6 +236,7 @@ class GitCCBridge(object):
     def _saveGitCommits(self):
         if len(self.git_commits) == 0:
             return
+        logger.info('Saving commits cache: %s', self.git_commits)
         concat_fn = lambda x,y: '%s\n%s' % (x,y)
         commit_blob = reduce(concat_fn, self.git_commits)
         ff = open(self.commit_cache, 'w')
@@ -270,7 +271,7 @@ class GitCCBridge(object):
             type, time, user, file, version, comment = line.split('\x01')
             if user != changeset.userId or comment != changeset.comment:
                 if not changeset.isempty():
-                    logger.info('Loading changeset [%s]', changeset.comment.split('\n')[0].strip())
+                    logger.info('Loading changeset "%s" - [ %s ]', changeset.comment.split('\n')[0].strip(), changeset)
                     cslist.append(changeset)
                 changeset = ClearcaseChangeSet(user, comment)
             if type == 'checkinversion':
@@ -279,7 +280,7 @@ class GitCCBridge(object):
                 if comment.startswith('Uncataloged file element'):
                     changeset.add(createClearcaseDelete(time, self.git_dir, file, version, comment))
         if not changeset.isempty():
-            logger.info('Loading changeset [%s]', changeset.comment.split('\n')[0].strip())
+            logger.info('Loading changeset "%s" - [ %s ]', changeset.comment.split('\n')[0].strip(), changeset)
             cslist.append(changeset)
         return cslist
 
@@ -403,6 +404,9 @@ class ClearcaseChangeSet(object):
         self.comment = comment
         self.changes = []
         self.time = None
+
+    def __str__(self):
+        return ','.join(map(lambda a: a.file, self.changes))
 
     def isempty(self):
         return len(self.changes) == 0

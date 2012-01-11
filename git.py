@@ -140,7 +140,6 @@ class GitFacade(object):
         # ivar: why not use -z flag here?   
         commits = self._git_exec(['log', '--first-parent', '--reverse', '--format=%H', '%s..%s' % (fromRef, toRef)]).strip()
         res = commits.split('\n') if commits != '' else None
-        logger.debug(res)
         recorder.debug('%s', formatRecord(res, fromRef, toRef))
         return res
 
