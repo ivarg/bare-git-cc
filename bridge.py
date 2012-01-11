@@ -36,6 +36,9 @@ cc = git = None
 
 
 def isPendingClearcaseChanges():
+    '''
+    Returns a bool telling whether there are unsynchronized changes in clearcase.
+    '''
     date = git.authorDate(CC_BRANCH) + timedelta(seconds=1)
     since = datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
     history = cc.checkinHistoryReversed(since)
@@ -44,6 +47,16 @@ def isPendingClearcaseChanges():
 
 
 class GitCCBridge(object):
+    '''
+    The bridge operates by having a dedicated branch (CC_BRANCH) reflecting the state of 
+    the clearcase view. Each new commit on CC_BRANCH is immediately merged on master and
+    pushed to the remote, presumably shared, repository.
+    New commits originating from the remote is pulled to master and then stored. When the
+    time comes to synchronize with clearcase (checkin), e.g. when build and auto tests
+    have verified integrity, each stored commit is subsequently merged on the CC_BRANCH and
+    it's changes are checked in to clearcase.
+    '''
+
     def __init__(self, cfg):
         global cc, git
         self.git_dir = cfg.gitRoot()
@@ -56,17 +69,11 @@ class GitCCBridge(object):
         self.checkouts = []
 
 
-
     def onDoCheckinToClearcase(self):
         '''
-        Stuff is verified on central and we should do a checkin to clearcase.
-        This can be executed only if we can to reserved checkouts on all concerned files.
-        If not, we must throw an exception.
-        First, we get the latest from Central.
-        If all files are then successfully checked out, we merge the saved commits (git_commits)
-        on the CC branch, one at a time, and for each merge, we checkin the files to clearcase,
-        keeping the files checked out.
-        Finally, we undo our reserved checkouts.
+        Pull any new commits from remote to master.
+        For each pending commit to be checked in, merge it onto the cc branch and check in
+        it's file changes.
         '''
         self._loadGitCommits()
         head = git.branchHead(MASTER)
