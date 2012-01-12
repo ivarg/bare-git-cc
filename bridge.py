@@ -17,8 +17,8 @@ logger = logging.getLogger('log.bgcc.file')
 ## Branch names
 CC_BRANCH = 'master_cc'
 MASTER = 'master'
-# The CI_TAG tag is set at the commit most recently successfully checked in to clearcase, 
-# and is removed when no pending commit needs to be checked in. 
+# The CI_TAG tag is set at the commit most recently successfully checked in to clearcase,
+# and is removed when no pending commit needs to be checked in.
 # Thus, one should never see the tag unless something has gone wrong.
 CI_TAG = 'master_ci'
 
@@ -48,7 +48,7 @@ def isPendingClearcaseChanges():
 
 class GitCCBridge(object):
     '''
-    The bridge operates by having a dedicated branch (CC_BRANCH) reflecting the state of 
+    The bridge operates by having a dedicated branch (CC_BRANCH) reflecting the state of
     the clearcase view. Each new commit on CC_BRANCH is immediately merged on master and
     pushed to the remote, presumably shared, repository.
     New commits originating from the remote is pulled to master and then stored. When the
@@ -77,7 +77,7 @@ class GitCCBridge(object):
         '''
         self._loadGitCommits()
         head = git.branchHead(MASTER)
-        self._updateMasterFromCentral()
+        self._updateMasterFromCentral() # ivar: This may not be safe since new commits have not been verivied by CI
         if len(self.git_commits) == 0:
             logger.info('No pending commits to check in to Clearcase')
             return
@@ -159,9 +159,9 @@ class GitCCBridge(object):
 
     def _addDiscoveredChanges(self):
         '''
-        Check for discrepancies between git and clearcase. If any are found, update 
+        Check for discrepancies between git and clearcase. If any are found, update
         git to be aligned with clearcase, and return the resulting commitId.
-        The purpose is primarily to discover renames in clearcase, but is also a way 
+        The purpose is primarily to discover renames in clearcase, but is also a way
         to ensure synchronization between git and clearcase.
         '''
         (addition_dict, deletion_list) = self.syncReport()
@@ -252,7 +252,7 @@ class GitCCBridge(object):
             self.git_commits = blob.split('\n')
             os.remove(self.commit_cache)
             logger.info('Loading commits cache: %s', self.git_commits)
-            
+
 
     def _getClearcaseChanges(self):
         '''
