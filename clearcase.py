@@ -79,7 +79,7 @@ class ClearcaseFacade(object):
         self._cc_exec(['unco', '-rm', file])
 
     def update(self):
-        self._cc_exec(['update'])
+        self._cc_exec(['update', '-overwrite'])
 
     def checkin(self, file, comment):
         self._cc_exec(['ci', '-identical', '-c', comment, file])
