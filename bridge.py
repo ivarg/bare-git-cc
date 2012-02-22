@@ -564,6 +564,12 @@ class RenameDiff():
         self.checkins.extend(path)
 
     def updateCCArea(self):
+        # Copy the contents of the 'new' file in the git area to the 'old' file in the cc area
+        blob = git.blob(self.commitId, self.dst)
+        f = open(join(self.viewroot, self.file), 'wb')
+        f.write(blob)
+        f.close()
+
         dst_dir = dirname(self.dst)
         path = []
         while not exists(join(self.viewroot, dst_dir)):
