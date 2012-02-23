@@ -19,7 +19,7 @@ def initLogging(cfg):
     logger.addHandler(h)
 
     logger = logging.getLogger('log.bgcc.file')
-    h = logging.handlers.RotatingFileHandler(cfg.logFile(), maxBytes=32768, backupCount=1)
+    h = logging.handlers.RotatingFileHandler(cfg.logFile(), maxBytes=130000, backupCount=1)
     h.setFormatter(logging.Formatter('%(asctime)s [%(module)s.%(funcName)s] %(message)s'))
     h.setLevel(logging.DEBUG)
     logger.addHandler(h)
