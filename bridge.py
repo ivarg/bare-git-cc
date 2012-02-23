@@ -4,6 +4,7 @@ import tempfile
 from os.path import join, exists, dirname
 from datetime import datetime, timedelta
 import logging
+import traceback
 
 import users
 from git import GitFacade
@@ -39,7 +40,7 @@ def isPendingClearcaseChanges():
     '''
     Returns a bool telling whether there are unsynchronized changes in clearcase.
     '''
-    date = git.authorDate(CC_BRANCH) + timedelta(seconds=1)
+    date = git.commitDate(CC_BRANCH) + timedelta(seconds=1)
     since = datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
     history = cc.checkinHistoryReversed(since)
     logger.info('Pending file changes in Clearcase: %d', len(history))
@@ -77,7 +78,7 @@ class GitCCBridge(object):
         '''
         self._loadGitCommits()
         head = git.branchHead(MASTER)
-        self._updateMasterFromCentral() # ivar: This may not be safe since new commits have not been verivied by CI
+        self._updateMasterFromCentral() # ivar: This may not be safe since new commits have not been verified by CI
         if len(self.git_commits) == 0:
             logger.info('No pending commits to check in to Clearcase')
             return
@@ -198,10 +199,6 @@ class GitCCBridge(object):
         git.checkout(branch)
         for commitId in commits:
             msg = git.commitMessage(commitId)
-            env = os.environ
-            env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = git.authorDateStr(commitId)
-            env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = git.authorName(commitId)
-            env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = git.authorEmail(commitId)
             try:
                 git.mergeCommitFf(commitId, msg)
                 logger.info('Merged on branch %s commit %s', branch, commitId[:7])
@@ -259,7 +256,7 @@ class GitCCBridge(object):
         Retreives latest changes from clearcase and commits them to the cc branch (CC_BRANCH)
         '''
         logger.debug('')
-        date = git.authorDate(CC_BRANCH) + timedelta(seconds=1)
+        date = git.commitDate(CC_BRANCH) + timedelta(seconds=1)
         since = datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
         history = cc.checkinHistoryReversed(since)
         if len(history) == 0:
@@ -333,6 +330,7 @@ class CommitToClearcase(object):
             for diff in self.diffs:
                 diff.updateCCArea()
         except Exception as e:
+            traceback.print_exc()
             for file in self._filesToCheckout():
                 cc.undoCheckout(file)
             raise UpdateCCAreaException(diff.commitId, str(e))

@@ -89,14 +89,9 @@ class GitFacade(object):
         recorder.debug('%s', formatRecord(res, commitId))
         return res
 
-
-    def authorDate(self, commitId):
-        res = datetime.strptime(self.authorDateStr(commitId), '%Y-%m-%d %H:%M:%S')
-        return res
-        
-    def authorDateStr(self, commitId):
-        res = self._git_exec(['show', '-s', '--format=%ai', commitId])[:19]
-        recorder.debug('%s', formatRecord(res, commitId))
+    def commitDate(self, commitId):
+        dateStr = self._git_exec(['show', '-s', '--format=%ci', commitId])[:19]
+        res = datetime.strptime(dateStr, '%Y-%m-%d %H:%M:%S')
         return res
 
     def authorName(self, commitId):
