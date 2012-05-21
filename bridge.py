@@ -422,6 +422,8 @@ class ClearcaseChangeSet(object):
         env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = self.time.strftime('%Y-%m-%d %H:%M:%S')
         env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = users.getUserName(self.userId).encode()
         env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = str(users.getUserEmail(self.userId))
+        if self.comment == '':
+            self.comment = '<empty comment>'
         try:
             git.commit(self.comment, env)
             logger.info('Committed to branch %s change [%s] -> %s', CC_BRANCH, self.comment.split('\n')[0].strip(), git.branchHead()[:7])
