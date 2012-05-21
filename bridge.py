@@ -203,6 +203,7 @@ class GitCCBridge(object):
                 git.mergeCommitFf(commitId, msg)
                 logger.info('Merged on branch %s commit %s', branch, commitId[:7])
             except Exception as e:
+                logger.error('Exception caught: %s', str(e))
                 git.mergeAbort()
                 raise MergeConflictException(commitId, branch, str(e))
 
