@@ -263,20 +263,30 @@ class GitCCBridge(object):
         if len(history) == 0:
             return None
         cslist = []
-        type, _, user, _, _, comment = history[0].split('\x01')
-        changeset = ClearcaseChangeSet(user, comment)
+
+        _, t_time, t_user, _, _, t_comment = history[0].split('\x01')
+        changeset = ClearcaseChangeSet(t_user, t_comment)
         for line in history:
             type, time, user, file, version, comment = line.split('\x01')
-            if user != changeset.userId or comment != changeset.comment:
-                if not changeset.isempty():
-                    logger.info('Loading changeset "%s" - [ %s ]', changeset.comment.split('\n')[0].strip(), changeset)
-                    cslist.append(changeset)
-                changeset = ClearcaseChangeSet(user, comment)
+
             if type == 'checkinversion':
+                if user != t_user or comment != t_comment:
+                    if not changeset.isempty():
+                        logger.info('Loading changeset "%s" - [ %s ]', changeset.comment.split('\n')[0].strip(), changeset)
+                        cslist.append(changeset)
+                    changeset = ClearcaseChangeSet(user, comment)
                 changeset.add(ClearcaseModify(time, self.git_dir, file, version))
-            elif type == 'checkindirectory version':
-                if comment.startswith('Uncataloged file element'):
-                    changeset.add(createClearcaseDelete(time, self.git_dir, file, version, comment))
+                t_time, t_user, t_comment = time, user, comment
+
+            elif type == 'checkindirectory version' and comment.startswith('Uncataloged file element'):
+                if timeDiff(time, t_time) > 4:
+                    if not changeset.isempty():
+                        logger.info('Loading changeset "%s" - [ %s ]', changeset.comment.split('\n')[0].strip(), changeset)
+                        cslist.append(changeset)
+                    changeset = ClearcaseChangeSet(user, comment)
+                changeset.add(createClearcaseDelete(time, self.git_dir, file, version, comment))
+                t_time, t_user, t_comment = time, user, comment
+
         if not changeset.isempty():
             logger.info('Loading changeset "%s" - [ %s ]', changeset.comment.split('\n')[0].strip(), changeset)
             cslist.append(changeset)
@@ -423,7 +433,7 @@ class ClearcaseChangeSet(object):
         env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = self.time.strftime('%Y-%m-%d %H:%M:%S')
         env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = users.getUserName(self.userId).encode()
         env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = str(users.getUserEmail(self.userId))
-        if self.comment == '':
+        if self.comment.strip() == '':
             self.comment = '<empty comment>'
         try:
             git.commit(self.comment, env)
