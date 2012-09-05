@@ -2,6 +2,8 @@ import re
 from datetime import datetime
 import util
 import logging
+import os.path
+import os
 
 logger = logging.getLogger('log.bgcc.file')
 
@@ -19,7 +21,15 @@ def formatRecord(res, *args):
 
 class GitFacade(object):
     def __init__(self, git_dir):
-        self.git_dir = git_dir
+        self.git_dir = os.path.abspath(git_dir)
+        if not os.path.exists(self.git_dir):
+            os.makedirs(self.git_dir)
+
+    def init(self):
+        self._git_exec(['init'])
+
+    def exists(self):
+        return os.path.exists(os.path.join(self.git_dir, '.git'))
 
     def diffsByCommit(self, commitId):
         diffs = self._git_exec(['diff','--name-status', '-M', '-z', '%s^..%s' % (commitId, commitId)])
@@ -36,7 +46,10 @@ class GitFacade(object):
             self.resetHard(branches[branch])
 
     def checkout(self, ref):
-        self._git_exec(['checkout', ref])
+        try:
+            self._git_exec(['checkout', ref])
+        except:
+            self._git_exec(['checkout', '-b', ref])
         recorder.debug('%s', formatRecord(None, ref))
 
     def addFile(self, file):
