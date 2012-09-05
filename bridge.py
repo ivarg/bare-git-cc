@@ -169,6 +169,8 @@ class GitCCBridge(object):
         + Merge clearcase commits on master (risk of conflict here)
         + Push to central
         '''
+        # if cc.needUpdate():
+            # cc.update()
         self._loadGitCommits()
         logger.info('Committing Clearcase changes to Git')
         commits = []
@@ -177,7 +179,7 @@ class GitCCBridge(object):
         cchead = git.branchHead(CC_BRANCH)
         if cslist:
             commits = self._commitToCCBranch(cslist)
-        commits.extend(self._addDiscoveredChanges())
+        # commits.extend(self._addDiscoveredChanges())
         if self.remote:
             self._updateMasterFromCentral()
         self._saveGitCommits()
@@ -491,8 +493,8 @@ class ClearcaseChangeSet(object):
     def commitToGit(self):
         for change in self.changes:
             change.stage()
-        if cc.needUpdate():
-            cc.update()
+        # if cc.needUpdate():
+            # cc.update()
         env = os.environ
         env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = self.time.strftime('%Y-%m-%d %H:%M:%S')
         env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = users.getUserName(self.userId).encode()
