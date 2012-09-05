@@ -1,4 +1,4 @@
-import os, stat
+import os, stat, os.path
 import tempfile
 import re
 import util
@@ -71,6 +71,8 @@ class ClearcaseFacade(object):
         return filtered
 
     def copyVobFile(self, ccfile, dest):
+        if os.path.exists(dest):
+            os.remove(dest)
         self._cc_exec(['get','-to', dest, ccfile])
         os.chmod(dest, os.stat(dest).st_mode | stat.S_IWRITE)
         recorder.debug('%s', formatRecord(None, ccfile, dest))

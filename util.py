@@ -5,6 +5,7 @@ from os.path import join, dirname, exists
 from ConfigParser import SafeConfigParser
 import inspect
 import logging
+from datetime import datetime
 
 logger = logging.getLogger('log.bgcc.file')
 
@@ -28,7 +29,7 @@ class GitConfigParser():
             self.file = join(cwd, 'bgcc.conf')
         else:
             raise Exception('No configuration file found')
-        self.parser = SafeConfigParser();
+        self.parser = SafeConfigParser()
         self.parser.read(self.file)
 
     def gitRoot(self):
@@ -40,7 +41,9 @@ class GitConfigParser():
     def logFile(self):
         return self.parser.get('core', 'log_file')
     def remote(self):
-        return self.parser.get('core', 'remote')
+        if self.parser.has_option('core', 'remote'):
+            return self.parser.get('core', 'remote')
+        return None
     def getInclude(self):
         return self.parser.get('core', 'include').split('|')
     def getBranches(self):
@@ -72,3 +75,12 @@ def popen(exe, cmd, cwd, env=None, decode=True, errors=True):
     if errors and pipe.returncode > 0:
         raise Exception((stderr + stdout))
     return stdout if not decode else stdout
+
+
+def timeDiff(t1, t2):
+    # The assumption is that t2 > t1
+    t1 = datetime.strptime(t1, '%Y%m%d.%H%M%S')
+    t2 = datetime.strptime(t2, '%Y%m%d.%H%M%S')
+    td = t2 - t1
+    return td.days*24*60*60 + td.seconds
+
