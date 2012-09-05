@@ -99,6 +99,16 @@ class ClearcaseFacade(object):
     def moveFile(self, src, dst):
         self._cc_exec(['mv', '-nc', src, dst])
 
+    def catcs(self):
+        out = self._cc_exec(['catcs'])
+        # return re.match('include\s(.*)', out).group(1)
+        return out
+
+    def setcs(self, csfile):
+        print 'setting config spec to: %s' % csfile
+        self._cc_exec(['setcs', csfile])
+        print 'done'
+
 
     def _cc_exec(self, cmd, **args):
         return util.popen('cleartool', cmd, self.cc_dir, **args)

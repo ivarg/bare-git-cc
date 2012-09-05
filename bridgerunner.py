@@ -56,6 +56,8 @@ def main():
         elif args[0] == 'togit':
             if bridge.isPendingClearcaseChanges():
                 bb.onNewClearcaseChanges()
+        elif args[0] == 'init':
+            bb.newBridge(args[1])
         elif args[0] == 'update':
             if not bridge.cc.needUpdate():
                 logger.info('Clearcase view is up to date')

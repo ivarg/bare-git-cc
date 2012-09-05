@@ -70,6 +70,67 @@ class GitCCBridge(object):
         self.checkouts = []
 
 
+    def newBridge(self, since=None):
+        print str(datetime.now())[:19]
+        if git.exists():
+            raise Exception('Git repository already exists')
+        if since:
+            self._setandupdatecs(since)
+            self._addccfilestogitrepo(since)
+            self.cs = 'include \\\\appsto03\\config_specs\\prime\\main-windows.cspec' 
+            self._restorecs()
+            pass
+        self.onNewClearcaseChanges()
+        print str(datetime.now())[:19]
+
+        
+    def _restorecs(self):
+        tmpfile = tempfile.NamedTemporaryFile(mode='w', delete=False)
+        tmpfile.write(self.cs)
+        tmpfile.close()
+        # Set config spec and update (takes minutes)
+        logger.info('[%s] Restoring the config spec and updating view. This may take several minutes...' % str(datetime.now())[:19])
+        cc.setcs(tmpfile.name)
+        logger.info('[%s] Done setting the config spec.' % str(datetime.now())[:19])
+        os.remove(tmpfile.name)
+
+    def _addccfilestogitrepo(self, since):
+        # Initialize new git repo
+        git.init()
+        # For each file in the view, copy it to the git repo directory and add it to git
+        filedict = cc.fileVersionDictionary()
+        for file in filedict:
+            ccfile = '%s@@%s' % (file,filedict[file])
+            gitfile = os.path.join(git.git_dir, file)
+            if not os.path.exists(os.path.dirname(gitfile)):
+                # logger.info('creating dirs:', os.path.dirname(gitfile))
+                os.makedirs(os.path.dirname(gitfile))
+            cc.copyVobFile(ccfile, gitfile)
+            git.addFile(gitfile)
+        # Commit to git
+        time = datetime.strptime(since, '%d-%b-%Y')
+        env = os.environ
+        env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = time.strftime('%Y-%m-%d %H:%M:%S')
+        env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = 'Anonymous'
+        env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = 'anonymous@sungard.com'
+        git.commit('Initial commit', env)
+
+
+    def _setandupdatecs(self, since):
+        # Get config spec
+        self.cs = cc.catcs()
+        # Set timestamp and save to temp file
+        newcs = 'time %s\n%s' % (since, self.cs)
+        tmpfile = tempfile.NamedTemporaryFile(mode='w', delete=False)
+        tmpfile.write(newcs)
+        tmpfile.close()
+        # Set config spec and update (takes minutes)
+        logger.info('[%s] Setting the config spec and updating view. This may take several minutes...' % str(datetime.now())[:19])
+        cc.setcs(tmpfile.name)
+        logger.info('[%s] Done setting the config spec.' % str(datetime.now())[:19])
+        os.remove(tmpfile.name)
+
+
     def onDoCheckinToClearcase(self):
         '''
         Pull any new commits from remote to master.
