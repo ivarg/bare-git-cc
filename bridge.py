@@ -172,12 +172,14 @@ class GitCCBridge(object):
         self._loadGitCommits()
         logger.info('Committing Clearcase changes to Git')
         commits = []
+        git.checkout(CC_BRANCH)
         cslist = self._getClearcaseChanges()
         cchead = git.branchHead(CC_BRANCH)
         if cslist:
             commits = self._commitToCCBranch(cslist)
         commits.extend(self._addDiscoveredChanges())
-        self._updateMasterFromCentral()
+        if self.remote:
+            self._updateMasterFromCentral()
         self._saveGitCommits()
         if commits:
             head = git.branchHead(MASTER)
@@ -187,7 +189,8 @@ class GitCCBridge(object):
                 git.resetHard(head)
                 git.resetHard(cchead)
                 raise mce
-            self._pushMasterToCentral()
+            if self.remote:
+                self._pushMasterToCentral()
 
 
     def syncReport(self):
@@ -340,7 +343,7 @@ class GitCCBridge(object):
                 t_time, t_user, t_comment = time, user, comment
 
             elif type == 'checkindirectory version' and comment.startswith('Uncataloged file element'):
-                if timeDiff(time, t_time) > 4:
+                if util.timeDiff(t_time, time) > 4:
                     if not changeset.isempty():
                         logger.info('Loading changeset "%s" - [ %s ]', changeset.comment.split('\n')[0].strip(), changeset)
                         cslist.append(changeset)
