@@ -497,7 +497,7 @@ class ClearcaseChangeSet(object):
             # cc.update()
         env = os.environ
         env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = self.time.strftime('%Y-%m-%d %H:%M:%S')
-        env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = users.getUserName(self.userId).encode()
+        env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = users.getUserName(self.userId).encode('latin-1')
         env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = str(users.getUserEmail(self.userId))
         if self.comment.strip() == '':
             self.comment = '<empty comment>'
