@@ -113,7 +113,7 @@ class GitCCBridge(object):
         env['GIT_AUTHOR_DATE'] = env['GIT_COMMITTER_DATE'] = time.strftime('%Y-%m-%d %H:%M:%S')
         env['GIT_AUTHOR_NAME'] = env['GIT_COMMITTER_NAME'] = 'Anonymous'
         env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = 'anonymous@sungard.com'
-        git.commit('Initial commit', env)
+        git.commit('Repository snapshot at %s' % time.strftime('%Y-%m-%d'), env)
 
 
     def _setandupdatecs(self, since):
@@ -172,14 +172,16 @@ class GitCCBridge(object):
         # if cc.needUpdate():
             # cc.update()
         self._loadGitCommits()
-        logger.info('Committing Clearcase changes to Git')
         commits = []
         git.checkout(CC_BRANCH)
         cslist = self._getClearcaseChanges()
         cchead = git.branchHead(CC_BRANCH)
         if cslist:
+            logger.info('Committing Clearcase changes to Git')
             commits = self._commitToCCBranch(cslist)
-        # commits.extend(self._addDiscoveredChanges())
+            # commits.extend(self._addDiscoveredChanges())
+        else:
+            logger.info('Nothing to commit')
         if self.remote:
             self._updateMasterFromCentral()
         self._saveGitCommits()
