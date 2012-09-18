@@ -48,10 +48,12 @@ class ClearcaseFacade(object):
         ls.extend(self.includes)
         vob = self._cc_exec(ls)
         vob = re.findall('^(version.*)', vob, re.M)
-        fileversions = map(lambda ss: re.match('version\s+([^\s]+)', ss).group(1).replace('\\','/'), vob)
+        fileversions = map(lambda ss: re.match('version\s+(.*?@@[^\s]+)', ss).group(1).replace('\\','/'), vob)
         vobdict = {}
         for fv in fileversions:
-            obj = re.match('[\./]*(.+)@@(.+)', fv, re.M)
+            if fv.startswith('./'):
+                fv = fv[2:]
+            obj = re.match('(.+)@@(.+)', fv, re.M)
             if not obj:
                 logger.error('No cc version format: %s', fv)
             else:
