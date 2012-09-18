@@ -19,10 +19,14 @@ def formatRecord(res, *args):
 
 
 class ClearcaseFacade(object):
-    def __init__(self, cc_dir, includes, branches):
+    def __init__(self, cc_dir, includes, branches, recursive=True):
         self.cc_dir = cc_dir
-        self.includes = includes
+        if includes != ['']:
+            self.includes = includes
+        else:
+            self.includes = None
         self.branches = branches
+        self.recursive = recursive
 
     def needUpdate(self):
         '''
@@ -44,8 +48,11 @@ class ClearcaseFacade(object):
         '''
         Return a dictionary containing all versioned files in the clearcase view, with their corresponding branch/version.
         '''
-        ls = ['ls', '-long', '-recurse', '-vob']
-        ls.extend(self.includes)
+        ls = ['ls', '-long', '-vob']
+        if self.recursive:
+            ls.append('-recurse')
+        if self.includes:
+            ls.extend(self.includes)
         vob = self._cc_exec(ls)
         vob = re.findall('^(version.*)', vob, re.M)
         fileversions = map(lambda ss: re.match('version\s+(.*?@@[^\s]+)', ss).group(1).replace('\\','/'), vob)
@@ -62,14 +69,18 @@ class ClearcaseFacade(object):
         return vobdict
 
     def checkinHistoryReversed(self, since):
-        lsh = ['lsh', '-fmt', '%o%m\001%Nd\001%u\001%En\001%Vn\001%Nc\n', '-recurse', '-since', since]
-        lsh.extend(self.includes) ## To filter our folders specified in configuration
+        lsh = ['lsh', '-fmt', '%o%m\001%Nd\001%u\001%En\001%Vn\001%Nc\n']
+        if self.recursive:
+            lsh.append('-recurse')
+        lsh.extend(['-since', since])
+        if self.includes:
+            lsh.extend(self.includes) ## To filter our folders specified in configuration
         blob = self._cc_exec(lsh).replace('\\', '/') # clean up windows separator ugliness
         ptrn = '^(checkin.+?\x01.+?\x01.+?\x01.+?\x01.+[%s]/\d+\x01.*)' % ','.join(self.branches)
         filtered = re.findall(ptrn, blob, re.M)
         filtered.reverse()
         logger.debug(filtered)
-        recorder.debug('%s', formatRecord(filtered, since, self.includes))
+        # recorder.debug('%s', formatRecord(filtered, since, self.includes))
         return filtered
 
     def copyVobFile(self, ccfile, dest):
