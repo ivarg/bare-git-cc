@@ -1,4 +1,4 @@
-from sys import argv
+﻿from sys import argv
 import traceback
 import bridge
 import logging
@@ -28,7 +28,7 @@ def initLogging(cfg):
     h = logging.handlers.SMTPHandler(cfg.smtpServer(), cfg.emailSender(), cfg.emailRecipients(), 'Bridge error alert!')
     h.setFormatter(logging.Formatter('%(message)s'))
     h.setLevel(logging.ERROR)
-    logger.addHandler(h)
+    # logger.addHandler(h)
 
 
 
@@ -58,6 +58,8 @@ def main():
                 bb.onNewClearcaseChanges()
         elif args[0] == 'init':
             bb.newBridge(args[1])
+        elif args[0] == 'clone':
+            bb._addccfilestogitrepo(args[1])
         elif args[0] == 'update':
             if not bridge.cc.needUpdate():
                 logger.info('Clearcase view is up to date')
@@ -83,3 +85,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # init()
