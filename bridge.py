@@ -64,7 +64,7 @@ class GitCCBridge(object):
         self.cc_dir = cfg.ccRoot()
         self.remote = cfg.remote()
         git = GitFacade(self.git_dir)
-        cc = ClearcaseFacade(self.cc_dir, cfg.getInclude(), cfg.getBranches())
+        cc = ClearcaseFacade(self.cc_dir, cfg.getInclude(), cfg.getBranches(), cfg.recursive())
         self.commit_cache = join(self.git_dir, '.git', COMMIT_CACHE)
         self.git_commits = []
         self.checkouts = []

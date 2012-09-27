@@ -56,7 +56,7 @@ class GitConfigParser():
         return self.parser.get('email', 'smtp')
     def recursive(self):
         if self.parser.has_option('core', 'recursive'):
-            return self.parser.get('core', 'recursive')
+            return self.parser.get('core', 'recursive') == 'True'
         return True
 
 
