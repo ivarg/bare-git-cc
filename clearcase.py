@@ -6,11 +6,6 @@ import logging
 
 # This is temporary stuff just for recording, set level to DEBUG to enable
 logger = logging.getLogger('log.bgcc.file')
-recorder = logging.getLogger('log.bgcc.clearcase')
-# h = logging.FileHandler('ccrecorder.log', 'w')
-# h.setFormatter(logging.Formatter('%(message)s'))
-# h.setLevel(logging.INFO)
-# recorder.addHandler(h)
 
 
 def formatRecord(res, *args):
@@ -41,7 +36,6 @@ class ClearcaseFacade(object):
         ff.close()
         os.remove(tmpfile)
         hits = re.findall('^Updated:', buf, re.M)
-        recorder.debug('%s', formatRecord(len(hits) > 0))
         return len(hits) > 0
 
     def fileVersionDictionary(self):
@@ -65,7 +59,6 @@ class ClearcaseFacade(object):
                 logger.error('No cc version format: %s', fv)
             else:
                 vobdict[obj.group(1)] = obj.group(2)
-        recorder.debug('%s', formatRecord(vobdict))
         return vobdict
 
     def checkinHistoryReversed(self, since):
@@ -80,7 +73,6 @@ class ClearcaseFacade(object):
         filtered = re.findall(ptrn, blob, re.M)
         filtered.reverse()
         logger.debug(filtered)
-        # recorder.debug('%s', formatRecord(filtered, since, self.includes))
         return filtered
 
     def copyVobFile(self, ccfile, dest):
@@ -88,7 +80,6 @@ class ClearcaseFacade(object):
             os.remove(dest)
         self._cc_exec(['get','-to', dest, ccfile])
         os.chmod(dest, os.stat(dest).st_mode | stat.S_IWRITE)
-        recorder.debug('%s', formatRecord(None, ccfile, dest))
 
     def undoCheckout(self, file):
         self._cc_exec(['unco', '-rm', file])
@@ -126,6 +117,7 @@ class ClearcaseFacade(object):
 
 
     def _cc_exec(self, cmd, **args):
+        logger.debug('cleartool %s' % ' '.join(cmd))
         return util.popen('cleartool', cmd, self.cc_dir, **args)
 
 
