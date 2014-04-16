@@ -45,7 +45,8 @@ class GitFacade(object):
 
     def addFile(self, file):
         # ivar: why errors=False?
-        self._git_exec(['add', '-f', file], errors=False)
+        # we need to add lowercase file names
+        self._git_exec(['add', file], errors=True)
 
     def removeFile(self, file):
         self._git_exec(['rm', file])
@@ -79,7 +80,8 @@ class GitFacade(object):
         self._git_exec(['remote', 'update'])
 
     def commitMessage(self, commitId):
-        res = self._git_exec(['log', '--format=%B', '%s^..%s' % (commitId, commitId)]).strip()
+        # res = self._git_exec(['log', '--format=%B', '%s^..%s' % (commitId, commitId)]).strip()
+        res = self._git_exec(['show', '-s', '--format=%s', commitId])
         return res
 
     def commitDate(self, commitId):

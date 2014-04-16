@@ -16,7 +16,7 @@ logger = logging.getLogger('log.bgcc.file')
 
 
 ## Branch names
-CC_BRANCH = 'master_cc'
+CC_BRANCH = None
 MASTER = 'master'
 # The CI_TAG tag is set at the commit most recently successfully checked in to clearcase,
 # and is removed when no pending commit needs to be checked in.
@@ -59,12 +59,14 @@ class GitCCBridge(object):
     '''
 
     def __init__(self, cfg):
-        global cc, git
+        global cc, git, CC_BRANCH, MASTER
         self.git_dir = cfg.gitRoot()
         self.cc_dir = cfg.ccRoot()
         self.remote = cfg.remote()
         git = GitFacade(self.git_dir)
-        cc = ClearcaseFacade(self.cc_dir, cfg.getInclude(), cfg.getBranches(), cfg.recursive())
+        cc = ClearcaseFacade(self.cc_dir, cfg.getInclude(), cfg.getCcBranch(), cfg.recursive())
+        MASTER = cfg.getGitBranch()
+        CC_BRANCH = '%s_cc' % MASTER
         self.commit_cache = join(self.git_dir, '.git', COMMIT_CACHE)
         self.git_commits = []
         self.checkouts = []
@@ -324,7 +326,6 @@ class GitCCBridge(object):
         '''
         Retreives latest changes from clearcase and commits them to the cc branch (CC_BRANCH)
         '''
-        logger.debug('')
         date = git.commitDate(CC_BRANCH) + timedelta(seconds=1)
         since = datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
         history = cc.checkinHistoryReversed(since)

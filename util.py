@@ -46,8 +46,10 @@ class GitConfigParser():
         return None
     def getInclude(self):
         return self.parser.get('core', 'include').split('|')
-    def getBranches(self):
-        return self.parser.get('core', 'branches').split('|')
+    def getCcBranch(self):
+        return self.parser.get('core', 'cc_branch')
+    def getGitBranch(self):
+        return self.parser.get('core', 'git_branch')
     def emailSender(self):
         return self.parser.get('email', 'sender')
     def emailRecipients(self):

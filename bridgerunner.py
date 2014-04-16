@@ -15,7 +15,7 @@ def initLogging(cfg):
     logger.setLevel(logging.NOTSET)
     h = logging.StreamHandler()
     h.setFormatter(logging.Formatter('> %(message)s'))
-    h.setLevel(logging.INFO)
+    h.setLevel(logging.DEBUG)
     logger.addHandler(h)
 
     logger = logging.getLogger('log.bgcc.file')
@@ -53,9 +53,11 @@ def main():
     try:
         if args[0] == 'tocc':
             bb.onDoCheckinToClearcase()
+        if args[0] == 'align':
+            bb._addDiscoveredChanges()
         elif args[0] == 'togit':
-            if bridge.isPendingClearcaseChanges():
-                bb.onNewClearcaseChanges()
+            # if bridge.isPendingClearcaseChanges():
+            bb.onNewClearcaseChanges()
         elif args[0] == 'init':
             bb.newBridge(args[1])
         elif args[0] == 'clone':

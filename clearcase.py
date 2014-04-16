@@ -14,13 +14,13 @@ def formatRecord(res, *args):
 
 
 class ClearcaseFacade(object):
-    def __init__(self, cc_dir, includes, branches, recursive=True):
+    def __init__(self, cc_dir, includes, branch, recursive=True):
         self.cc_dir = cc_dir
         if includes != ['']:
             self.includes = includes
         else:
             self.includes = None
-        self.branches = branches
+        self.branch = branch
         self.recursive = recursive
 
     def needUpdate(self):
@@ -69,9 +69,12 @@ class ClearcaseFacade(object):
         if self.includes:
             lsh.extend(self.includes) ## To filter our folders specified in configuration
         blob = self._cc_exec(lsh).replace('\\', '/') # clean up windows separator ugliness
-        ptrn = '^(checkin.+?\x01.+?\x01.+?\x01.+?\x01.+[%s]/\d+\x01.*)' % ','.join(self.branches)
+        ptrn = '^(checkin.+?\x01.+?\x01.+?\x01.+?\x01.+%s/\d+\x01.*)' % self.branch
         filtered = re.findall(ptrn, blob, re.M)
         filtered.reverse()
+        # logger.debug(blob)
+        logger.debug(self.branch)
+        logger.debug(ptrn)
         logger.debug(filtered)
         return filtered
 
